@@ -1,0 +1,5 @@
+backup/
+apply_ledger.json
+editor/apply_art.local.json
+.dotpet-export
+.DS_Store

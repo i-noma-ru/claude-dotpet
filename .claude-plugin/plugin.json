@@ -1,0 +1,6 @@
+{
+  "name": "dotpet",
+  "version": "0.1.0",
+  "description": "ドット絵のペットを入力欄の上に出す（待機・作業中・完了・おやすみで絵が変わる。/dotpet で出す・消す）。絵はブラウザのエディタで描き替えられる",
+  "types": "./types/index.d.ts"
+}

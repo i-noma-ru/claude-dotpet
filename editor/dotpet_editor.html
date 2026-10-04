@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>トカゲの絵を編集</title>
+<style>
+:root{color-scheme:light dark;--page:#f2f1ed;--panel:#fffefa;--ink:#283333;--muted:#536463;--line:#c9d0ca;--accent:#286b63;--selected:#e1efea;--error:#b12d37}
+@media(prefers-color-scheme:dark){:root{--page:#202827;--panel:#293331;--ink:#ecf0e9;--muted:#b2c5be;--line:#596b64;--accent:#9dd9c3;--selected:#3c5148;--error:#ff9399}}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.5 system-ui,"Hiragino Sans","Yu Gothic",sans-serif}main{max-width:1440px;margin:auto;padding:18px}h1{font-size:23px;margin:0}h2{font-size:15px;margin:0 0 10px}p{margin:6px 0}header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}.muted{color:var(--muted)}button,select,input{font:inherit}button,select{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:6px 10px;cursor:pointer;white-space:nowrap}button:hover{border-color:var(--accent)}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}button[aria-pressed=true],.chosen{background:var(--selected);border:2px solid var(--accent)}button:disabled{opacity:.45;cursor:default}.bar{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:8px 0}.panel{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:12px}.frames{display:flex;flex-wrap:wrap;gap:4px;max-height:240px;overflow:auto}.frame{padding:3px;width:67px;font-size:11px;line-height:1.2}.frame canvas{display:block;width:58px;height:35px;margin:auto;image-rendering:pixelated;background:#1d2525}.workspace{display:grid;grid-template-columns:minmax(560px,1fr) 1fr;gap:14px;margin-top:12px}#canvas{display:grid;grid-template-columns:repeat(20,20px);position:relative;width:400px;touch-action:none;user-select:none;background:repeating-conic-gradient(#b8c3c0 0% 25%,#e3e8e4 0% 50%) 0/16px 16px}.dot{width:20px;height:20px;border:1px solid #54625a30}.cell-line{position:absolute;border:1px solid #253e4870;width:40px;height:80px;pointer-events:none}.cell-line.bad{border:2px solid #e33142;background:#ff102012}#violations{color:var(--muted);min-height:24px}#violations.bad{color:var(--error);font-weight:bold}.swatch{display:inline-flex;gap:4px;align-items:center;padding:5px 7px}.chip{display:inline-block;width:16px;height:16px;border:1px solid #78877e}.palette{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}.palette-item input{width:100%;height:25px;padding:0;border:1px solid var(--line);background:none}#preview{display:block;width:200px;height:120px;image-rendering:pixelated;margin:8px 0;background:#1d2525}#pose-list{max-height:158px;overflow:auto;display:flex;flex-wrap:wrap;gap:4px}#pose-list button{padding:4px;font-size:12px}#pose-list canvas{width:58px;height:35px;display:block;image-rendering:pixelated;background:#1d2525}#errors{color:var(--error);white-space:pre-wrap;max-height:150px;overflow:auto}#command{white-space:normal;max-width:100%;overflow-wrap:anywhere;text-align:left;font:12px/1.6 ui-monospace,monospace}#export{background:var(--accent);color:var(--panel);font-weight:bold}#status{min-height:20px}@media(max-width:1000px){.workspace{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body><main>
+<header><div><h1>トカゲの絵を編集</h1><p class="muted">コマを選んで、ドットを塗る。書き出した JSON をコマンドで反映できます。</p><p id="base-info" class="muted"></p></div><label>JSON を読み込む <input id="load" type="file" accept=".json,application/json"></label></header>
+<div class="bar"><button id="size-big">大（20 × 10）</button><button id="size-small">小（20 × 12）</button><label>状態 <select id="mode"><option value="idle">待機</option><option value="work">作業中</option><option value="done">完了</option><option value="sleep">おやすみ</option></select></label><button id="play">再生</button><span class="muted">110 ms / 刻み</span></div>
+<section class="panel"><h2>コマの割り当て <span id="frame-label" class="muted"></span></h2><div id="frames" class="frames"></div><p class="muted">キーボードの ← → で前後のコマへ移ります（端まで行くと反対側へつながります）。</p></section>
+<div class="workspace">
+<section class="panel"><h2>ドットを編集 <span id="pose-label" class="muted"></span></h2><div id="canvas" aria-label="編集するドットのマス目"></div><p id="violations"></p><div class="bar"><button id="undo">元に戻す</button><button id="redo">やり直し</button><button id="pick" aria-pressed="false">スポイト</button></div><p class="muted">押す・なぞるで塗る。Ctrl / Cmd + Z で戻す、Shift を加えてやり直し。</p><div class="bar"><label>ずらす対象 <select id="shift-scope"><option value="pose">この絵だけ</option><option value="mode">この状態の絵すべて</option><option value="size">このサイズの絵すべて</option></select></label><button data-shift="0,-1" aria-label="上へずらす">↑</button><button data-shift="0,1" aria-label="下へずらす">↓</button><button data-shift="-1,0" aria-label="左へずらす">←</button><button data-shift="1,0" aria-label="右へずらす">→</button></div><p class="muted">Shift + 矢印キーでも絵を 1 ドットずつずらせます。枠の外に出る方向へは動きません。小は横に 2・縦に 4 ずつ動かすと、2 色の決まりが崩れません。</p><p id="shift-msg" role="status"></p><p id="usage"></p><div class="bar"><button id="clone">このコマだけ別の絵にする</button><button id="assign">このコマに別の絵を割り当てる</button></div><div id="pose-list" hidden></div></section>
+<section class="panel"><h2>色と見え方</h2><div id="palette" class="palette"></div><p class="muted">透明も、小の「2 色まで」の1色に数えます。</p><div class="bar"><label>見え方の背景 <select id="background"><option value="dark">暗い</option><option value="light">明るい</option></select></label></div><canvas id="preview" width="200" height="120" aria-label="端末での見え方"></canvas><p class="muted">小は横2 × 縦4のマスごとに地色と文字色を決めて表示します。3色のマスは赤く表示します。</p><div class="bar"><button id="export">書き出す</button><span id="dirty" class="muted"></span></div><p class="muted">書き出しは 1 回で全部です。大・小のどの状態で塗った内容も、状態やコマを切り替えても消えず、まとめて 1 つのファイルになります。</p><div id="errors" role="alert"></div><p id="status" role="status"></p><button id="command" hidden></button></section>
+</div></main>
+<script src="dotpet_art.js"></script>
+<script>
+'use strict';
+const KEYS = ['A', 'S', 'M', 'E', 'P', 'K', 'B', 'C', 'V'];
+const MODES = ['idle', 'work', 'done', 'sleep'];
+const LENGTHS = [8, 48, 8, 8];
+const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+function validate(data) {
+  const errors = [];
+  if (!object(data)) return ['JSON の全体はオブジェクトが必要です'];
+  if (data.version !== 1) errors.push('version は 1 が必要です');
+  if (!object(data.palette) || Object.keys(data.palette).length !== 9 || KEYS.some(k => !Object.hasOwn(data.palette, k))) {
+    errors.push('palette のキーは A S M E P K B C V の9個が必要です');
+  }
+  for (const key of KEYS) {
+    if (typeof data.palette?.[key] !== 'string' || !/^#[0-9a-f]{6}$/i.test(data.palette[key])) errors.push(`palette.${key} は # と16進6桁の色が必要です`);
+  }
+  for (const size of ['big', 'small']) {
+    const part = data[size], rows = size === 'big' ? 10 : 12;
+    if (!object(part)) { errors.push(`${size} はオブジェクトが必要です`); continue; }
+    if (part.columns !== 20) errors.push(`${size}.columns は 20 が必要です`);
+    if (part.rows !== rows) errors.push(`${size}.rows は ${rows} が必要です`);
+    if (!Array.isArray(part.poses) || part.poses.length === 0) errors.push(`${size}.poses は1枚以上の絵が必要です`);
+    if (Array.isArray(part.poses)) part.poses.forEach((pose, p) => {
+      const label = `${size} の絵 ${p + 1}`;
+      if (!Array.isArray(pose)) { errors.push(`${label} は行の配列が必要です`); return; }
+      if (pose.length !== rows) errors.push(`${label} の行数が ${pose.length}（${rows} が必要）`);
+      pose.forEach((line, y) => {
+        if (typeof line !== 'string') { errors.push(`${label}・行 ${y + 1} は文字列が必要です`); return; }
+        if (line.length !== 20) errors.push(`${label}・行 ${y + 1} の長さが ${line.length}（20 が必要）`);
+        for (const key of new Set(line)) if (key !== ' ' && (!KEYS.includes(key) || !Object.hasOwn(data.palette || {}, key))) errors.push(`${label}・行 ${y + 1} にパレットに無い文字: ${key}`);
+      });
+      if (size === 'small' && pose.length === rows && pose.every(line => typeof line === 'string' && line.length === 20)) {
+        for (let y = 0; y < rows; y += 4) for (let x = 0; x < 20; x += 2) {
+          const colors = [...new Set([0,1,2,3].flatMap(dy => [pose[y+dy][x], pose[y+dy][x+1]]))];
+          if (colors.length > 2) errors.push(`${label}・マス (列 ${x/2+1}, 行 ${y/4+1}) に ${colors.length} 色: ${colors.map(k => k === ' ' ? '空白' : k).join(' ')}`);
+        }
+      }
+    });
+    if (!object(part.order) || Object.keys(part.order).length !== 4 || MODES.some(m => !Object.hasOwn(part.order, m))) errors.push(`${size}.order のキーは idle work done sleep の4個が必要です`);
+    MODES.forEach((mode, i) => {
+      const frames = part.order?.[mode];
+      if (!Array.isArray(frames)) { errors.push(`${size}.order.${mode} はコマ番号の配列が必要です`); return; }
+      if (frames.length !== LENGTHS[i]) errors.push(`${size}.order.${mode} の長さが ${frames.length}（${LENGTHS[i]} が必要）`);
+      frames.forEach((n, f) => {
+        if (!Number.isInteger(n) || n < 0 || n >= (part.poses?.length || 0)) errors.push(`${size}.order.${mode}・コマ ${f + 1} の絵番号 ${String(n)} は poses の範囲内の整数が必要です`);
+      });
+    });
+  }
+  return errors;
+}
+function normalize(data) {
+  const out = {version: 1, palette: Object.fromEntries(KEYS.map(k => [k, data.palette[k].toLowerCase()]))};
+  for (const size of ['big', 'small']) {
+    const poses = [], order = {}, seen = new Map();
+    for (const mode of MODES) order[mode] = data[size].order[mode].map(n => {
+      const pose = data[size].poses[n], key = JSON.stringify(pose);
+      if (!seen.has(key)) { seen.set(key, poses.length); poses.push([...pose]); }
+      return seen.get(key);
+    });
+    out[size] = {columns: 20, rows: size === 'big' ? 10 : 12, poses, order};
+  }
+  return out;
+}
+function serialize(data) {
+  return JSON.stringify(data, null, 2).replace(/\[\n\s+(\d+(?:,\n\s+\d+)*)\n\s+\]/g, (_, values) => '[' + values.replace(/,\n\s+/g, ', ') + ']') + '\n';
+}
+
+const $ = id => document.getElementById(id);
+const cloneData = value => JSON.parse(JSON.stringify(value));
+let data = null, size = 'big', mode = 'idle', frame = 0, key = 'A', picking = false;
+let past = [], future = [], saved = '', timer = null, tick = 0, stroke = false, strokeStart = null, assigning = false;
+function poseIndex(){return data[size].order[mode][frame];}
+function rows(){return data[size].poses[poseIndex()];}
+function errors(list){$('errors').textContent = list.join('\n');}
+function remember(){past.push(cloneData(data)); if(past.length>100) past.shift(); future=[];}
+function changed(){errors([]);$('status').textContent='';render();}
+function mutate(fn){remember();fn();changed();}
+function isDirty(){return data && JSON.stringify(data)!==saved;}
+// 最後の書き出し（または読み込み）から変わった場所を、大小・全状態をまたいで並べる。
+function changeSummary(){
+ const s=JSON.parse(saved),out=[];
+ for(const z of ['big','small']){const label=z==='big'?'大':'小';
+  const n=data[z].poses.map((p,i)=>JSON.stringify(p)!==JSON.stringify(s[z].poses[i])?i+1:0).filter(Boolean);
+  if(n.length)out.push(`${label}の絵 ${n.join('・')}`);
+  if(JSON.stringify(data[z].order)!==JSON.stringify(s[z].order))out.push(`${label}のコマの割り当て`);}
+ if(JSON.stringify(data.palette)!==JSON.stringify(s.palette))out.push('色');
+ return out.join('／');
+}
+// 元の印: この絵がどの正本を元にしているか。書き出しに入れ、反映コマンドが今の正本と照合する。
+let baseMarker=null;
+function load(value,marker,label){const e=validate(value); if(e.length){errors(e);return false;} stop();data=cloneData(value);delete data.base;baseMarker=marker;$('base-info').textContent=`元の絵: ${label}（元の印 ${marker||'なし。このまま書き出すと反映のときに止まります'}）`;past=[];future=[];saved=JSON.stringify(data);frame=0;assigning=false;errors([]);render();return true;}
+function violations(){
+ const out=[]; if(!data || size!=='small')return out;
+ const r=rows();
+ for(let y=0;y<12;y+=4)for(let x=0;x<20;x+=2){const colors=[...new Set([0,1,2,3].flatMap(dy=>[r[y+dy][x],r[y+dy][x+1]]))];if(colors.length>2)out.push({column:x/2+1,row:y/4+1,colors});}
+ return out;
+}
+function draw(canvas, r, background='#1d2525', octant=false){
+ const ctx=canvas.getContext('2d'); const unit=canvas.width/20;
+ ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle=background;ctx.fillRect(0,0,canvas.width,canvas.height);
+ if(!octant){r.forEach((line,y)=>[...line].forEach((k,x)=>{if(k!==' '){ctx.fillStyle=data.palette[k];ctx.fillRect(x*unit,y*unit,unit,unit);}}));return;}
+ for(let y=0;y<r.length;y+=4)for(let x=0;x<20;x+=2){
+  const pixels=[0,1,2,3].flatMap(dy=>[r[y+dy][x],r[y+dy][x+1]]), colors=[...new Set(pixels)];
+  if(colors.length>2){ctx.fillStyle='#e33142';ctx.fillRect(x*unit,y*unit,unit*2,unit*4);continue;}
+  const back=colors.includes(' ')?' ':colors[0], front=colors.find(c=>c!==back)??back;
+  const bits=front===back?0:pixels.reduce((n,k,i)=>k===front?n|(1<<i):n,0);
+  if(back!==' '){ctx.fillStyle=data.palette[back];ctx.fillRect(x*unit,y*unit,unit*2,unit*4);}
+  for(let i=0;i<8;i++)if(bits&(1<<i)){ctx.fillStyle=data.palette[front];ctx.fillRect((x+i%2)*unit,(y+Math.floor(i/2))*unit,unit,unit);}
+ }
+}
+function thumb(r){const c=document.createElement('canvas');c.width=80;c.height=r.length*4;draw(c,r);return c;}
+function pressed(id, yes){$(id).setAttribute('aria-pressed',String(yes));}
+function render(){
+ for(const id of ['size-big','size-small','mode','play','undo','redo','pick','clone','assign','export'])$(id).disabled=!data;
+ if(!data){$('status').textContent='JSON を読み込んでください';return;}
+ pressed('size-big',size==='big');pressed('size-small',size==='small');pressed('pick',picking);$('mode').value=mode;
+ $('undo').disabled=!past.length;$('redo').disabled=!future.length;
+ $('dirty').textContent=isDirty()?`まだ書き出していない変更: ${changeSummary()}`:'書き出し済み（変更なし）';
+ $('pose-label').textContent=`絵 ${poseIndex()+1}`;$('frame-label').textContent=`コマ ${frame+1} / ${data[size].order[mode].length}`;
+ const grid=$('canvas');grid.replaceChildren();
+ rows().forEach((line,y)=>[...line].forEach((k,x)=>{const dot=document.createElement('div');dot.className='dot';dot.dataset.x=x;dot.dataset.y=y;dot.style.background=k===' '?'transparent':data.palette[k];dot.title=`列 ${x+1}・行 ${y+1}: ${k===' '?'透明':k}`;grid.append(dot);}));
+ const bad=violations();$('violations').textContent=size!=='small'?'':bad.length?`赤枠のマス ${bad.length} 件に 3 色以上あります。2 色に減らすまで書き出せません（透明も 1 色に数えます）。`:'どのマスも 2 色までに収まっています。';$('violations').className=bad.length?'bad':'';
+ if(size==='small')for(let y=0;y<12;y+=4)for(let x=0;x<20;x+=2){const border=document.createElement('div');border.className='cell-line'+(bad.some(b=>b.column===x/2+1&&b.row===y/4+1)?' bad':'');border.style.left=x*20+'px';border.style.top=y*20+'px';grid.append(border);}
+ const frames=$('frames');frames.replaceChildren();data[size].order[mode].forEach((p,f)=>{const b=document.createElement('button');b.className='frame'+(f===frame?' chosen':'');b.setAttribute('aria-pressed',String(f===frame));b.append(thumb(data[size].poses[p]),document.createTextNode(`${f+1} / 絵${p+1}`));b.onclick=()=>select(size,mode,f);frames.append(b);});
+ const palette=$('palette');palette.replaceChildren();
+ for(const k of [...KEYS,' ']){const item=document.createElement('div');item.className='palette-item';const b=document.createElement('button');b.className='swatch';b.setAttribute('aria-pressed',String(key===k&&!picking));const chip=document.createElement('span');chip.className='chip';chip.style.background=k===' '?'transparent':data.palette[k];b.append(chip,document.createTextNode(k===' '?'透明':k));b.onclick=()=>{key=k;picking=false;render();};item.append(b);if(k!==' '){const input=document.createElement('input');input.type='color';input.value=data.palette[k];input.setAttribute('aria-label',`${k} の色`);input.onchange=()=>mutate(()=>data.palette[k]=input.value);item.append(input);}palette.append(item);}
+ const use=MODES.reduce((n,m)=>n+data[size].order[m].filter(p=>p===poseIndex()).length,0);$('usage').textContent=`この絵は ${use} コマで使われています`;
+ $('pose-list').hidden=!assigning;if(assigning){$('pose-list').replaceChildren();data[size].poses.forEach((p,n)=>{const b=document.createElement('button');b.append(thumb(p),document.createTextNode(`絵 ${n+1}`));b.onclick=()=>mutate(()=>{data[size].order[mode][frame]=n;assigning=false;});$('pose-list').append(b);});}
+ $('preview').height=rows().length*10;$('preview').style.height=rows().length*10+'px';draw($('preview'),rows(),$('background').value==='dark'?'#1d2525':'#f5f3eb',size==='small');
+}
+function paint(x,y,k){
+ if(!data||!Number.isInteger(x)||!Number.isInteger(y)||x<0||x>=20||y<0||y>=data[size].rows||![' ',...KEYS].includes(k))return;
+ if(rows()[y][x]===k)return;
+ if(!stroke)remember();const line=rows()[y];rows()[y]=line.slice(0,x)+k+line.slice(x+1);changed();
+}
+function finishStroke(){if(!stroke)return;stroke=false;if(JSON.stringify(data)!==JSON.stringify(strokeStart)){past.push(strokeStart);if(past.length>100)past.shift();future=[];}strokeStart=null;render();}
+function pointer(e){const rect=$('canvas').getBoundingClientRect(),x=Math.floor((e.clientX-rect.left)/20),y=Math.floor((e.clientY-rect.top)/20);if(x<0||x>=20||y<0||y>=data[size].rows)return;if(picking){key=rows()[y][x];picking=false;render();return;}paint(x,y,key);}
+$('canvas').onpointerdown=e=>{if(!data||e.button!==0)return;e.preventDefault();stop();if(picking){pointer(e);return;}strokeStart=cloneData(data);stroke=true;pointer(e);};
+window.addEventListener('pointermove',e=>{if(stroke)pointer(e);});window.addEventListener('pointerup',finishStroke);window.addEventListener('pointercancel',finishStroke);window.addEventListener('blur',finishStroke);
+function undo(){finishStroke();if(!past.length)return;future.push(cloneData(data));data=past.pop();changed();}
+function redo(){finishStroke();if(!future.length)return;past.push(cloneData(data));data=future.pop();changed();}
+$('undo').onclick=undo;$('redo').onclick=redo;
+window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!['INPUT','TEXTAREA'].includes(e.target.tagName)){e.preventDefault();stop();e.shiftKey?redo():undo();}});
+// 左右キーでコマを前後に送る（端でつながる）。入力欄と選択欄ではそちらの操作を優先する。
+window.addEventListener('keydown',e=>{if(!data||e.ctrlKey||e.metaKey||e.altKey||e.shiftKey||!['ArrowLeft','ArrowRight'].includes(e.key)||['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;e.preventDefault();const n=data[size].order[mode].length;select(size,mode,(frame+(e.key==='ArrowRight'?1:n-1))%n);document.querySelector('#frames .chosen')?.scrollIntoView({block:'nearest',inline:'nearest'});});
+// 絵をずらす。対象のどれか 1 枚でも枠の外へ出るなら、位置がばらけないように全部を動かさない。
+function shiftArt(dx,dy,scope=$('shift-scope').value){
+ if(!data)return false;finishStroke();stop();
+ const part=data[size],targets=scope==='size'?part.poses.map((_,i)=>i):scope==='mode'?[...new Set(part.order[mode])]:[poseIndex()];
+ const h=part.rows,blocked=targets.filter(p=>part.poses[p].some((line,y)=>[...line].some((k,x)=>k!==' '&&(x+dx<0||x+dx>19||y+dy<0||y+dy>=h))));
+ if(blocked.length){$('shift-msg').textContent=`これ以上${dx<0?'左':dx>0?'右':dy<0?'上':'下'}へ動かせません（絵 ${blocked.map(p=>p+1).join('・')} が枠の端に届いています）。`;return false;}
+ mutate(()=>{for(const p of targets){const old=part.poses[p];part.poses[p]=old.map((_,y)=>Array.from({length:20},(_,x)=>old[y-dy]?.[x-dx]??' ').join(''));}});
+ $('shift-msg').textContent=`${targets.length} 枚を${dx<0?'左':dx>0?'右':dy<0?'上':'下'}へ 1 ドットずらしました。`;return true;
+}
+document.querySelectorAll('[data-shift]').forEach(b=>b.onclick=()=>{const [dx,dy]=b.dataset.shift.split(',').map(Number);shiftArt(dx,dy);});
+window.addEventListener('keydown',e=>{const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(!d||!data||!e.shiftKey||e.ctrlKey||e.metaKey||e.altKey||['INPUT','TEXTAREA'].includes(e.target.tagName))return;e.preventDefault();shiftArt(d[0],d[1]);});
+function stop(){if(timer!==null)clearInterval(timer);timer=null;$('play').textContent='再生';}
+function select(s,m,f){finishStroke();if(!data||!['big','small'].includes(s)||!MODES.includes(m)||!Number.isInteger(f)||f<0||f>=data[s].order[m].length)return;stop();size=s;mode=m;frame=f;assigning=false;render();}
+$('size-big').onclick=()=>select('big',mode,0);$('size-small').onclick=()=>select('small',mode,0);$('mode').onchange=()=>select(size,$('mode').value,0);
+$('background').onchange=render;$('pick').onclick=()=>{picking=!picking;render();};
+$('clone').onclick=()=>mutate(()=>{data[size].poses.push([...rows()]);data[size].order[mode][frame]=data[size].poses.length-1;});
+$('assign').onclick=()=>{assigning=!assigning;render();};
+function frameAt(m,t){if(m==='work')return t%48;const step=Math.floor(t/3);if(m==='idle')return Math.max(0,(step%10)-2);const frames=m==='done'?[0,0,0,0,1,2,3,4,4,5,6,7]:[0,0,0,1,2,2,3,4,4,5,6,6,7];return frames[step%frames.length];}
+$('play').onclick=()=>{if(timer!==null){stop();return;}finishStroke();tick=0;frame=frameAt(mode,tick);render();$('play').textContent='停止';timer=setInterval(()=>{tick++;frame=frameAt(mode,tick);render();},110);};
+$('load').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const value=JSON.parse(await file.text());if(isDirty()&&!window.confirm('書き出していない変更があります。読み込みで置き換えますか？'))return;load(value,typeof value.base==='string'?value.base:null,`読み込んだファイル ${file.name}`);}catch(err){errors(['JSON を読めません: '+err.message]);}e.target.value='';};
+function exportText(){finishStroke();if(!data){errors(['JSON を読み込んでください']);return null;}const e=validate(data);errors(e);if(e.length){$('command').hidden=true;$('status').textContent=`書き出しを止めました（ファイルは保存していません）。上の ${e.length} 件を直してから、もう一度「書き出す」を押してください。`;return null;}const out=normalize(data);if(baseMarker)out.base=baseMarker;return serialize(out);}
+$('export').onclick=()=>{const text=exportText();if(text===null)return;const url=URL.createObjectURL(new Blob([text],{type:'application/json;charset=utf-8'}));const a=document.createElement('a');a.href=url;const t=new Date(),two=n=>String(n).padStart(2,'0'),name=`dotpet_art_${t.getFullYear()}${two(t.getMonth()+1)}${two(t.getDate())}-${two(t.getHours())}${two(t.getMinutes())}${two(t.getSeconds())}.json`;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);saved=JSON.stringify(data);render();$('status').textContent=`${name} を書き出しました（大・小の全部の状態の絵、色、コマの割り当てを含みます）。次のコマンドをコピーして実行してください。`;$('command').hidden=false;$('command').textContent=`node "${HERE}apply_art.js" ~/Downloads/${name}`;};
+// 反映コマンドはこの HTML と同じフォルダにある。どこから実行しても届くよう、絶対パスで案内する（Windows の /C:/ は先頭の / を外す）。
+const HERE=decodeURIComponent(location.pathname).replace(/^\/([A-Za-z]:)/,'$1').replace(/[^/]*$/,'');
+$('command').onclick=async()=>{const text=$('command').textContent;try{await navigator.clipboard.writeText(text);}catch{const input=document.createElement('textarea');input.value=text;document.body.append(input);input.select();const ok=document.execCommand('copy');input.remove();if(!ok){$('status').textContent='コピーできませんでした。表示されたコマンドを選択してコピーしてください。';return;}}$('status').textContent='コマンドをコピーしました';};
+window.addEventListener('beforeunload',e=>{if(isDirty()){e.preventDefault();e.returnValue='';}});
+window.dotpetEditor={getData:()=>data?cloneData(data):null,paint,select,violations,exportText,shiftArt};
+function start(){if(window.DOTPET_ART)load(window.DOTPET_ART,window.DOTPET_ART_BASE||null,'反映済みの絵');else render();}
+start();
+// ブラウザが古い dotpet_art.js を使い回した場合に備え、時刻つきでもう一度読み、元の印が違えば新しい絵に入れ替える。
+// 動的な読み込みができない環境（撮影ツール）では何も起きず、上の読み込みのまま動く。
+(()=>{const first=window.DOTPET_ART_BASE;const s=document.createElement('script');s.src='dotpet_art.js?t='+Date.now();s.onload=()=>{if(window.DOTPET_ART_BASE!==first&&!isDirty())start();};document.head.append(s);})();
+</script></body></html>
