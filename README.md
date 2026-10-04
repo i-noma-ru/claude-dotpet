@@ -4,10 +4,16 @@ A pixel-art pet that sits above the prompt input in Claude Code's terminal UI, p
 
 日本語の説明は [README.ja.md](README.ja.md) にあります。
 
+| Idle | Working | Done | Sleeping |
+|---|---|---|---|
+| ![Bun-chan idle](assets/bun-chan-idle.gif) | ![Bun-chan working](assets/bun-chan-work.gif) | ![Bun-chan done](assets/bun-chan-done.gif) | ![Bun-chan sleeping](assets/bun-chan-sleep.gif) |
+
+This is **Bun-chan** (文ちゃん), the author's pet bearded dragon and a member of the family.
+
 - The pet changes with the session: **idle**, **working**, **done**, **sleeping**.
 - `/dotpet` turns it on and off and switches the size.
 - All frames live in one JSON file. Open `editor/dotpet_editor.html` in a browser, paint, export, and run one command to apply.
-- The bundled lizard is a placeholder. Draw your own.
+- The default art is a plain green sample lizard, meant to be redrawn. Bun-chan is included as a second art file (see [Choose the pet](#choose-the-pet)).
 
 The in-app messages and the editor UI are in Japanese.
 
@@ -46,6 +52,24 @@ Notes:
 - `small` uses octant characters (U+1CD00 and up, "Symbols for Legacy Computing Supplement"). The terminal font must have these glyphs, for example Cascadia Code. Without them the pet shows as empty boxes.
 - `image` and `still` need a terminal that supports the kitty graphics protocol. `image` was seen working in kitty and Ghostty; `still` has not been checked there. In other terminals a text fallback is shown; use `big` or `small` there.
 - The pet is not drawn outside the terminal UI, when the band above the input is too short, or while another plugin is drawing in the same band.
+
+## Choose the pet
+
+Two art files are included in `art/pets/`:
+
+| File | Pet | License |
+|---|---|---|
+| `sample-lizard.json` | Green sample lizard (the default) | MIT |
+| `bun-chan.json` | Bun-chan, shown in the GIFs above | CC BY-NC 4.0 |
+
+Switch with the apply command, from the repository folder:
+
+```
+node editor/apply_art.js --force art/pets/bun-chan.json
+node editor/apply_art.js --force art/pets/sample-lizard.json
+```
+
+`--force` is needed because these files are not exports from the editor and carry no base marker. The command replaces the current art, so export your own drawing first if you want to keep it (the previous files are also saved under `backup/`).
 
 ## Redraw the pet
 
@@ -102,4 +126,7 @@ claude plugin test .
 
 ## License
 
-MIT. See [LICENSE](LICENSE). The bundled sample art is covered by the same license.
+- Code and the sample lizard: MIT. See [LICENSE](LICENSE).
+- Bun-chan artwork (`art/pets/bun-chan.json` and the GIFs in `assets/`): CC BY-NC 4.0. See [LICENSE-ART.md](LICENSE-ART.md). Credit the author when you reuse it; commercial use, such as selling goods with the artwork, is not permitted. Showing Bun-chan in your own terminal is fine, including on a computer you use for work.
+
+The first draft of the Bun-chan pixel art was made with an AI tool; the author then redrew it by hand in the editor.
