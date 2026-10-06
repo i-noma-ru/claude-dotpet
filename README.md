@@ -1,31 +1,37 @@
 # claude-dotpet
 
 A pixel-art pet that sits above the prompt input in Claude Code's terminal UI, plus a browser-based editor for redrawing it.
+The pet changes with the session state, so you can see at a glance whether Claude is still working without reading the transcript.
 
 日本語の説明は [README.ja.md](README.ja.md) にあります。
+
+## When to use
+
+- When you want to see whether Claude is still working, or has finished, from the picture above the prompt rather than from the text.
+- When you want to draw your own pet in a browser and apply it with one command, instead of editing source files by hand.
+- When you want a ready-made pet: Bun-chan is included as a second art file, and the default sample lizard is meant to be redrawn.
+
+Not for you if you use Claude Code outside the terminal UI, need Windows (untested), or want the in-app messages and the editor UI in a language other than Japanese.
+
+## What it looks like
+
+This is **Bun-chan** (文ちゃん), the author's pet bearded dragon and a member of the family.
 
 | Idle | Working | Done | Sleeping |
 |---|---|---|---|
 | ![Bun-chan idle](assets/bun-chan-idle.gif) | ![Bun-chan working](assets/bun-chan-work.gif) | ![Bun-chan done](assets/bun-chan-done.gif) | ![Bun-chan sleeping](assets/bun-chan-sleep.gif) |
 
-This is **Bun-chan** (文ちゃん), the author's pet bearded dragon and a member of the family.
+The pet reflects the session state: **idle**, **working**, **done**, and **sleeping**. The default art is a plain green sample lizard, meant to be redrawn. Bun-chan is included as a second art file (see [Choose the pet](#choose-the-pet)).
 
-- The pet reflects the session state: **idle**, **working**, **done**, and **sleeping**.
-- `/dotpet` toggles the pet on and off and switches its size.
-- All frames live in a single JSON file. Open `editor/dotpet_editor.html` in a browser, paint, export, and run a single command to apply the changes.
-- The default art is a plain green sample lizard, meant to be redrawn. Bun-chan is included as a second art file (see [Choose the pet](#choose-the-pet)).
+## Requirements
 
-The in-app messages and the editor UI are in Japanese.
-
-## Status
-
+- Claude Code, and Node.js 18 or later for the editor's apply command.
 - Built on Claude Code's plugin hooks ("mods") API, which is in early access and may change between versions.
 - Developed and tested with Claude Code 2.1.288 and 2.1.289 on macOS.
 - **Windows is untested.**
+- The in-app messages and the editor UI are in Japanese.
 
 ## Install
-
-Requirements: Claude Code, and Node.js 18 or later for the editor's apply command.
 
 1. Clone this repository.
 2. Start Claude Code with the folder as a plugin:
