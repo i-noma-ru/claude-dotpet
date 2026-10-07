@@ -1,0 +1,18 @@
+{
+  "name": "claude-dotpet",
+  "metadata": {
+    "description": "Claude Code mod: a pixel-art pet above the prompt input that changes with the session state, plus a browser-based editor for redrawing it."
+  },
+  "owner": {
+    "name": "i-noma-ru"
+  },
+  "plugins": [
+    {
+      "name": "dotpet",
+      "description": "Shows a pixel-art pet above the prompt input. The picture changes with the session state (idle, working, done, sleeping), so you can see whether Claude is still working without reading the transcript. /dotpet shows or hides it; the art can be redrawn in a browser editor.",
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/i-noma-ru/claude-dotpet"
+    }
+  ]
+}
