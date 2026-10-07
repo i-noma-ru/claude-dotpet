@@ -56,7 +56,7 @@ The pet reflects the session state: **idle**, **working**, **done**, and **sleep
 Notes:
 
 - `small` uses octant characters (U+1CD00 and above, "Symbols for Legacy Computing Supplement"). The terminal font must include these glyphs (e.g., Cascadia Code); otherwise, the pet displays as empty boxes.
-- `image` and `still` require a terminal that supports the kitty graphics protocol. `image` has been confirmed working in kitty and Ghostty; `still` has not yet been tested there. In other terminals, a text fallback is shown; use `big` or `small` instead.
+- `image` and `still` require a terminal that supports the kitty graphics protocol. Both have been confirmed working in kitty and Ghostty (`still` on 2026-10-08 with Claude Code 2.1.292). In other terminals, a text fallback is shown; use `big` or `small` instead.
 - The pet is not drawn outside the terminal UI, when the band above the input is too short, or while another plugin is drawing in the same band.
 
 ## Choose the pet
