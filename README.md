@@ -40,7 +40,7 @@ The pet reflects the session state: **idle**, **working**, **done**, and **sleep
    claude --plugin-dir /path/to/claude-dotpet
    ```
 
-`--plugin-dir` loads the plugin for that session only. To load it in every session, place the folder inside a directory listed in the `CLAUDE_CODE_PLUGIN_DIRS` environment variable. That variable worked in 2.1.288 but does not appear in `claude --help`, so treat it as subject to change.
+`--plugin-dir` loads the plugin for that session only. To load it in every session, add it to the `CLAUDE_CODE_PLUGIN_DIRS` environment variable: a `:`-separated list where each entry is either a plugin folder itself or a folder that contains plugin folders (both confirmed in 2.1.292). The variable does not appear in `claude --help`, so treat it as subject to change.
 
 ## Commands
 
