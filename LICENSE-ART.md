@@ -10,6 +10,7 @@ The following files are **not** covered by the MIT License. They are licensed un
 - `assets/bun-chan-work.gif`
 - `assets/bun-chan-done.gif`
 - `assets/bun-chan-sleep.gif`
+- `.claude-plugin/icon.png` (the big idle pose, used as the listing icon)
 
 Copyright (c) 2026 i-noma-ru
 
