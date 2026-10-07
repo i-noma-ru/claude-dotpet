@@ -1,6 +1,14 @@
 {
   "name": "dotpet",
-  "version": "0.1.0",
-  "description": "ドット絵のペットを入力欄の上に出す（待機・作業中・完了・おやすみで絵が変わる。/dotpet で出す・消す）。絵はブラウザのエディタで描き替えられる",
+  "version": "0.1.1",
+  "description": "A pixel-art pet above the prompt input that changes with the session state (idle, working, done, sleeping). /dotpet shows or hides it; the art can be redrawn in a bundled browser editor.",
+  "author": {
+    "name": "i-noma-ru",
+    "url": "https://github.com/i-noma-ru"
+  },
+  "homepage": "https://github.com/i-noma-ru/claude-dotpet",
+  "repository": "https://github.com/i-noma-ru/claude-dotpet",
+  "license": "MIT",
+  "keywords": ["claude-code", "mod", "pet", "pixel-art", "ui"],
   "types": "./types/index.d.ts"
 }

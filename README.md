@@ -122,6 +122,16 @@ Fixed in this version:
 - Frame counts: idle 8, working 48, done 8, sleeping 8. Animation speed is set in `hooks/art.ts`.
 - For `small`, every 2 × 4 block of dots may use at most two colors, and transparent counts as one. A terminal cell can only carry a foreground and a background color. The editor outlines offending blocks in red and refuses to export until they are fixed.
 
+## What the plugin reads, writes, runs, and submits
+
+This section lists everything the plugin touches, for review. Nothing leaves the machine.
+
+**In the session (the mod):** it reads the session state that Claude Code passes to its hooks (idle, working, done) and a timer, and draws the pet above the prompt input. It stores two values through Claude Code's plugin store: whether the pet is shown and which size was chosen. It registers one command, `/dotpet`. It does not read the conversation, the prompt text, files, or environment variables, does not run any external command, never calls the model, and never submits or edits a prompt.
+
+**The editor (`editor/dotpet_editor.html`):** a single offline HTML page you open yourself. It makes no network requests and only downloads a JSON file to your browser's download folder.
+
+**The apply script (`editor/apply_art.js`):** a Node.js script you run yourself from a terminal. It reads the JSON you exported, backs up the current art to `backup/` inside the plugin folder, rewrites `art/dotpet_art.json` and the four generated files, and then runs `claude plugin validate` and `claude plugin test` on the plugin folder. It writes only inside the plugin folder and makes no network requests.
+
 ## Tests
 
 ```
