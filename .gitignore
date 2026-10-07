@@ -3,3 +3,6 @@ apply_ledger.json
 editor/apply_art.local.json
 .dotpet-export
 .DS_Store
+# Claude Code が --plugin-dir で読み込むときに生成する型と tsconfig
+.claude-plugin/types/
+tsconfig.json
