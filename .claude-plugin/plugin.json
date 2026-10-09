@@ -1,6 +1,6 @@
 {
   "name": "dotpet",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A pixel-art pet above the prompt input that changes with the session state (idle, working, done, sleeping). /dotpet shows or hides it; the art can be redrawn in a bundled browser editor.",
   "author": {
     "name": "i-noma-ru",

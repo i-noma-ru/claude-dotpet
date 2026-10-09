@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, Timer } from 'claude-code'
+import type { EngineInterface, Register, RenderInput, Timer } from 'claude-code'
 
 import {
   advance,
@@ -183,91 +183,112 @@ export const register: Register = on => {
       return next(e)
     }
 
-    // 下の MOD が帯を描くとき（vime の変換候補など）は、そちらに譲る。
-    // dotpet は名前順で先に読み込まれるので、譲らないと下の帯が出ない
+    // 下の MOD が帯を描くとき（vime の変換候補・ruling-tracker の未記録の裁定・drop-thumb の画像など）は、
+    // トカゲの下にその帯を積んで両方を出す（2026-10-09・それまでは譲ってトカゲが消えていた）。
+    // dotpet は名前順で先に読み込まれるので、next(e) を呼ばないと下の帯が出ない
     const below = await next(e)
+    const hasBelow = below.type !== 'engine'
 
-    if (below.type !== 'engine') {
-      stop(stage)
+    // 下の帯のぶん 1 行は空けておく。足りなければ従来どおり譲る
+    const pet = await petOf($, e, stage, hasBelow ? 1 : 0)
 
+    if (pet === null) {
       return below
     }
 
-    stage.size = await read($, size)
-
-    // 静止画は帯を描いたときの 1 枚だけを出し、時計も回さない
-    if (stage.size === 'still') {
-      if (!(await read($, isOn)) || e.props.hasSurvey || e.props.maxRows < BOX.still.rows) {
-        stop(stage)
-
-        return below
-      }
-
-      stage.timer?.cancel()
-      stage.timer = undefined
-      stage.band = e.requestId
-
-      const { Image: Still } = $.ui.resolve(e)
-
-      return <Still key={RASTER} source={STILL} columns={BOX.still.columns} rows={BOX.still.rows} alt={ALT} />
+    if (!hasBelow) {
+      return pet
     }
 
-    // オクタントは Raster で出せない文字（BMP の外）なので、色つきの Text を 1 マスずつ並べる
-    if (stage.size === 'small') {
-      if (!(await read($, isOn)) || e.props.hasSurvey || e.props.maxRows < BOX.small.rows) {
-        stop(stage)
+    const { Box } = $.ui.resolve(e)
 
-        return below
-      }
+    return (
+      <Box flexDirection="column">
+        {pet}
+        {below}
+      </Box>
+    )
+  })
+}
 
-      // 絵が変わると paint がこの数を進めるので、読んでおくと帯が描き直される
-      await read($, redraw)
-      stage.band = e.requestId
-      stage.timer ??= $.clock.every(TICK_MS, () => tick($, stage))
+// トカゲの絵を 1 つ返す。出せない（OFF・アンケート中・高さ不足）ときは null を返し、時計も止める。
+// reserve = 下の帯のために空けておく行数
+async function petOf($: EngineInterface, e: RenderInput<'AbovePrompt', 'terminal'>, stage: Stage, reserve: number) {
+  stage.size = await read($, size)
+  const room = e.props.maxRows - reserve
 
-      const rows = drawn(stage)
-      stage.shown = rows.join('\n')
-
-      const { Box, Text } = $.ui.resolve(e)
-
-      return (
-        <Box flexDirection="column">
-          {octCells(rows).map(line => (
-            <Text>
-              {line.map(cell => (
-                <Text color={cell.color} backgroundColor={cell.background}>
-                  {cell.char}
-                </Text>
-              ))}
-            </Text>
-          ))}
-        </Box>
-      )
-    }
-
-    const isImage = stage.size === 'image'
-    const box = BOX[stage.size]
-
-    if (!(await read($, isOn)) || e.props.hasSurvey || e.props.maxRows < box.rows) {
+  // 静止画は帯を描いたときの 1 枚だけを出し、時計も回さない
+  if (stage.size === 'still') {
+    if (!(await read($, isOn)) || e.props.hasSurvey || room < BOX.still.rows) {
       stop(stage)
 
-      return below
+      return null
     }
 
-    const { Image, Raster } = $.ui.resolve(e)
+    stage.timer?.cancel()
+    stage.timer = undefined
     stage.band = e.requestId
-    // 時計は帯を描いたときに初めて回す（画面の無い実行では回さない）
+
+    const { Image: Still } = $.ui.resolve(e)
+
+    return <Still key={RASTER} source={STILL} columns={BOX.still.columns} rows={BOX.still.rows} alt={ALT} />
+  }
+
+  // オクタントは Raster で出せない文字（BMP の外）なので、色つきの Text を 1 マスずつ並べる
+  if (stage.size === 'small') {
+    if (!(await read($, isOn)) || e.props.hasSurvey || room < BOX.small.rows) {
+      stop(stage)
+
+      return null
+    }
+
+    // 絵が変わると paint がこの数を進めるので、読んでおくと帯が描き直される
+    await read($, redraw)
+    stage.band = e.requestId
     stage.timer ??= $.clock.every(TICK_MS, () => tick($, stage))
 
-    if (isImage) {
-      const source = picture(drawn(stage))
-      stage.shown = source.rgba
+    const rows = drawn(stage)
+    stage.shown = rows.join('\n')
 
-      return <Image key={RASTER} source={source} columns={box.columns} rows={box.rows} alt={ALT} />
-    }
+    const { Box, Text } = $.ui.resolve(e)
 
-    stage.shown = frame(stage)
+    return (
+      <Box flexDirection="column">
+        {octCells(rows).map(line => (
+          <Text>
+            {line.map(cell => (
+              <Text color={cell.color} backgroundColor={cell.background}>
+                {cell.char}
+              </Text>
+            ))}
+          </Text>
+        ))}
+      </Box>
+    )
+  }
 
-    return <Raster key={RASTER} columns={box.columns} rows={box.rows} cells={stage.shown} />
-  })
+  const isImage = stage.size === 'image'
+  const box = BOX[stage.size]
+
+  if (!(await read($, isOn)) || e.props.hasSurvey || room < box.rows) {
+    stop(stage)
+
+    return null
+  }
+
+  const { Image, Raster } = $.ui.resolve(e)
+  stage.band = e.requestId
+  // 時計は帯を描いたときに初めて回す（画面の無い実行では回さない）
+  stage.timer ??= $.clock.every(TICK_MS, () => tick($, stage))
+
+  if (isImage) {
+    const source = picture(drawn(stage))
+    stage.shown = source.rgba
+
+    return <Image key={RASTER} source={source} columns={box.columns} rows={box.rows} alt={ALT} />
+  }
+
+  stage.shown = frame(stage)
+
+  return <Raster key={RASTER} columns={box.columns} rows={box.rows} cells={stage.shown} />
 }

@@ -57,7 +57,7 @@ Notes:
 
 - `small` uses octant characters (U+1CD00 and above, "Symbols for Legacy Computing Supplement"). The terminal font must include these glyphs (e.g., Cascadia Code); otherwise, the pet displays as empty boxes.
 - `image` and `still` require a terminal that supports the kitty graphics protocol. Both have been confirmed working in kitty and Ghostty (`still` on 2026-10-08 with Claude Code 2.1.292). In other terminals, a text fallback is shown; use `big` or `small` instead.
-- The pet is not drawn outside the terminal UI, when the band above the input is too short, or while another plugin is drawing in the same band.
+- The pet is not drawn outside the terminal UI or when the band above the input is too short. When another plugin draws in the same band, that band is stacked below the pet (the pet yields only when there is no spare row for it; v0.2.0).
 
 ## Choose the pet
 

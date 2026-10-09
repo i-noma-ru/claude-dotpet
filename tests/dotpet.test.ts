@@ -189,23 +189,39 @@ test('ターンの開始で作業中、完了で完了の絵にする（サブ�
   await ui.unmount()
 })
 
-test('下の MOD が帯を描くあいだはそちらを出し、描かなくなったらトカゲに戻る', async ($, on) => {
+test('下の MOD が帯を描くときはトカゲの下にその帯を積み、描かなくなったらトカゲだけに戻る', async ($, on) => {
   const blits: Blit[] = []
   let isConverting = true
   const clock = stage(on, {}, blits, () => isConverting)
 
   await $.session.start(START)
   const ui = await $.ui.mount(BAND)
-  expect(await ui.drawn()).toMatchObject(CANDIDATES)
-  // 譲っているあいだは時計を回さず、描き替えも送らない
+  // 上にトカゲ、下に相手の帯（2026-10-09・それまでは譲ってトカゲが消えていた）
+  expect(await ui.drawn()).toMatchObject({
+    type: 'Box',
+    props: { flexDirection: 'column' },
+    children: [{ type: 'Raster', props: { key: 'dotpet', columns: 20, rows: 5 } }, CANDIDATES],
+  })
+  // 積んでいるあいだも時計は回り、絵が変わったら描き替える
   await clock.advance(TICK_MS * 12)
-  expect(blits).toEqual([])
+  expect(blits.length).toBeGreaterThan(0)
   await ui.unmount()
 
   isConverting = false
   const back = await $.ui.mount(BAND)
   expect(await back.drawn()).toMatchObject({ type: 'Raster', props: { key: 'dotpet', columns: 20, rows: 5 } })
   await back.unmount()
+})
+
+test('下の帯のぶんの 1 行が無いときは従来どおり譲る', async ($, on) => {
+  const blits: Blit[] = []
+  stage(on, {}, blits, () => true)
+
+  await $.session.start(START)
+  // トカゲの 5 行ちょうどしか無い: 下の帯に 1 行空けられないので相手の帯だけを出す
+  const ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, maxRows: 5 } })
+  expect(await ui.drawn()).toMatchObject(CANDIDATES)
+  await ui.unmount()
 })
 
 test('picture は 1 ドットを 4×4 ピクセルの RGBA にし、色の無いドットは透明にする', () => {
